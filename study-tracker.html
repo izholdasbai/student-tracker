@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Трекер учебных задач</title>
+<style>
+  :root {
+    --bg: #f4f7fb; --card: #ffffff; --text: #1f2a44; --muted: #7b869c;
+    --primary: #5b8def; --primary-d: #447be0; --border: #e3e9f3;
+    --ok: #3cb878; --danger: #ef6a6a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, #eaf1ff 0%, #f8fbff 60%); color: var(--text); min-height: 100vh;
+  }
+  .hidden { display: none !important; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px; box-shadow: 0 6px 24px rgba(60, 90, 150, .08);
+  }
+  h1, h2 { margin: 0 0 6px; }
+  h1 { font-size: 26px; }
+  p.sub { margin: 0 0 18px; color: var(--muted); }
+  input[type=text], input[type=password] {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 15px; background: #fbfcff; outline: none; transition: .15s;
+  }
+  input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(91,141,239,.18); }
+  button {
+    font: inherit; cursor: pointer; border: none; border-radius: 10px; padding: 12px 18px;
+    background: var(--primary); color: #fff; font-weight: 600; transition: .15s;
+  }
+  button:hover { background: var(--primary-d); }
+  button.ghost { background: transparent; color: var(--primary); }
+  button.ghost:hover { background: #eef3ff; }
+  button.danger { background: var(--danger); }
+  button.danger:hover { background: #dc5757; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; gap: 10px; }
+  .row > input { flex: 1; }
+  .tabs-auth { display: flex; gap: 6px; margin-bottom: 18px; background: #eef3fb; padding: 4px; border-radius: 12px; }
+  .tabs-auth button { flex: 1; background: transparent; color: var(--muted); }
+  .tabs-auth button.active { background: #fff; color: var(--primary); box-shadow: 0 2px 8px rgba(60,90,150,.1); }
+  .msg { min-height: 18px; font-size: 14px; color: var(--danger); }
+  header.top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  nav { display: flex; gap: 6px; }
+  nav button { background: #fff; color: var(--muted); border: 1px solid var(--border); padding: 9px 16px; }
+  nav button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .tasks { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 8px; }
+  .task {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    background: #fbfcff; border: 1px solid var(--border); border-radius: 12px;
+  }
+  .task input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--ok); cursor: pointer; }
+  .task .t { flex: 1; word-break: break-word; }
+  .task.done .t { text-decoration: line-through; color: var(--muted); }
+  .task .x { background: transparent; color: var(--danger); padding: 6px 10px; font-size: 18px; }
+  .task .x:hover { background: #fdeeee; }
+  .empty { text-align: center; color: var(--muted); padding: 24px 0 8px; }
+  .stats { color: var(--muted); font-size: 14px; margin-top: 12px; }
+  .profile-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .profile-row span:first-child { color: var(--muted); }
+  .profile-row b { word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ВХОД / РЕГИСТРАЦИЯ -->
+  <section id="auth" class="card hidden" style="margin-top:8vh">
+    <h1>📚 Трекер задач</h1>
+    <p class="sub">Учебные задачи и заметки в одном месте</p>
+    <div class="tabs-auth">
+      <button id="tab-login" class="active">Вход</button>
+      <button id="tab-register">Регистрация</button>
+    </div>
+    <form id="auth-form" class="stack">
+      <input type="text" id="login" placeholder="Логин" autocomplete="username">
+      <input type="password" id="password" placeholder="Пароль" autocomplete="current-password">
+      <div class="msg" id="auth-msg"></div>
+      <button type="submit" id="auth-submit">Войти</button>
+    </form>
+  </section>
+
+  <!-- ЛИЧНЫЙ КАБИНЕТ -->
+  <section id="app" class="hidden">
+    <header class="top">
+      <h2>📚 Мои задачи</h2>
+      <nav>
+        <button id="nav-tasks" class="active">Задачи</button>
+        <button id="nav-profile">Профиль</button>
+      </nav>
+    </header>
+
+    <div id="view-tasks" class="card">
+      <form id="task-form" class="row">
+        <input type="text" id="task-input" placeholder="Новая задача или заметка…" maxlength="200">
+        <button type="submit">Добавить</button>
+      </form>
+      <div style="margin-top:12px">
+        <input type="text" id="search" placeholder="🔍 Поиск по заметкам">
+      </div>
+      <ul class="tasks" id="task-list"></ul>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div id="view-profile" class="card hidden">
+      <h2>Профиль</h2>
+      <p class="sub">Данные вашего аккаунта</p>
+      <div class="profile-row"><span>Логин</span><b id="p-login"></b></div>
+      <div class="profile-row"><span>Пароль</span><b id="p-pass"></b></div>
+      <div style="margin-top:20px"><button class="danger" id="logout">Выйти</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // MVP: данные хранятся в localStorage. Пароль хранится открытым текстом — только для прототипа!
+  const $ = id => document.getElementById(id);
+  const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+  let mode = 'login';
+  let user = load('session', null);
+
+  // ---------- Auth ----------
+  function setMode(m) {
+    mode = m;
+    $('tab-login').classList.toggle('active', m === 'login');
+    $('tab-register').classList.toggle('active', m === 'register');
+    $('auth-submit').textContent = m === 'login' ? 'Войти' : 'Создать аккаунт';
+    $('auth-msg').textContent = '';
+  }
+  $('tab-login').onclick = () => setMode('login');
+  $('tab-register').onclick = () => setMode('register');
+
+  $('auth-form').onsubmit = e => {
+    e.preventDefault();
+    const login = $('login').value.trim(), pass = $('password').value;
+    const users = load('users', {});
+    if (!login || !pass) return $('auth-msg').textContent = 'Заполните оба поля';
+    if (mode === 'register') {
+      if (users[login]) return $('auth-msg').textContent = 'Такой логин уже занят';
+      users[login] = pass; save('users', users);
+    } else if (users[login] !== pass) {
+      return $('auth-msg').textContent = 'Неверный логин или пароль';
+    }
+    user = login; save('session', user);
+    $('auth-form').reset();
+    render();
+  };
+
+  $('logout').onclick = () => { user = null; localStorage.removeItem('session'); render(); };
+
+  // ---------- Tasks ----------
+  const key = () => 'tasks_' + user;
+  const getTasks = () => load(key(), []);
+
+  $('task-form').onsubmit = e => {
+    e.preventDefault();
+    const text = $('task-input').value.trim();
+    if (!text) return;
+    const t = getTasks(); t.unshift({ id: Date.now(), text, done: false });
+    save(key(), t); $('task-input').value = ''; renderTasks();
+  };
+  $('search').oninput = renderTasks;
+
+  function renderTasks() {
+    const all = getTasks(), q = $('search').value.trim().toLowerCase();
+    const list = all.filter(t => t.text.toLowerCase().includes(q));
+    const ul = $('task-list'); ul.innerHTML = '';
+    if (!list.length) {
+      const d = document.createElement('li'); d.className = 'empty';
+      d.textContent = all.length ? 'Ничего не найдено' : 'Пока нет задач — добавьте первую ✨';
+      ul.appendChild(d);
+    }
+    list.forEach(t => {
+      const li = document.createElement('li'); li.className = 'task' + (t.done ? ' done' : '');
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = t.done;
+      cb.onchange = () => { t.done = cb.checked; save(key(), all); renderTasks(); };
+      const span = document.createElement('span'); span.className = 't'; span.textContent = t.text; // textContent = защита от XSS
+      const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.title = 'Удалить';
+      x.onclick = () => { save(key(), all.filter(i => i.id !== t.id)); renderTasks(); };
+      li.append(cb, span, x); ul.appendChild(li);
+    });
+    const done = all.filter(t => t.done).length;
+    $('stats').textContent = all.length ? `Выполнено: ${done} из ${all.length}` : '';
+  }
+
+  // ---------- Navigation ----------
+  function showView(v) {
+    $('view-tasks').classList.toggle('hidden', v !== 'tasks');
+    $('view-profile').classList.toggle('hidden', v !== 'profile');
+    $('nav-tasks').classList.toggle('active', v === 'tasks');
+    $('nav-profile').classList.toggle('active', v === 'profile');
+    if (v === 'profile') {
+      $('p-login').textContent = user;
+      $('p-pass').textContent = load('users', {})[user] || '';
+    }
+  }
+  $('nav-tasks').onclick = () => showView('tasks');
+  $('nav-profile').onclick = () => showView('profile');
+
+  function render() {
+    const logged = user && load('users', {})[user] !== undefined;
+    if (!logged) user = null;
+    $('auth').classList.toggle('hidden', !!logged);
+    $('app').classList.toggle('hidden', !logged);
+    if (logged) { showView('tasks'); renderTasks(); }
+  }
+  render();
+</script>
+</body>
+</html>
